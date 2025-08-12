@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .utils.config import settings
-from .routers import memory
+from .routers import memory, s3_sync
 
 app = FastAPI(title="Livelex Backend", version="1.0.0")
 
@@ -20,3 +20,12 @@ def health():
     return {"status": "ok", "memory_root": str(settings.MEMORY_ROOT)}
 
 app.include_router(memory.router, prefix="/api")
+
+app.include_router(s3_sync.router, prefix="/api")
+
+@app.on_event("startup")
+async def _startup_autorestore():
+    try:
+        s3_sync.maybe_autorestore()
+    except Exception as e:
+        print(f"[S3] startup restore skipped: {e}")
